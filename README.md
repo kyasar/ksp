@@ -1,11 +1,9 @@
 # KSP 
 ### Kadir's just Subtitle Player
-Subtitle Player on Ncurses window
-Build, Run and see the Usage
+Subtitle Player on Ncurses window <br/> Build, Run and see the Usage
 
 ### Prerequisites
-libncurses 
-(Ubuntu users: sudo apt-get install libncurses5)
+libncurses <br/> (Ubuntu users: sudo apt-get install libncurses5)
 
 ### Build
 make
