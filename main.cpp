@@ -64,7 +64,7 @@ void continueMovie()
 	timer.it_value.tv_sec = 0;
 	timer.it_value.tv_usec = 1000;
 	timer.it_interval.tv_sec = 0;
-	timer.it_interval.tv_usec = 1000;
+	timer.it_interval.tv_usec = 1000;	// every milliseconds
 
 	setitimer (ITIMER_REAL, &timer, NULL);
 	timerStopped = false;
@@ -89,14 +89,14 @@ void clearLatestLinesOnScreen()
  * This method is invoked when fast forward or backward operation is needed
  * It finds the next subtitle entry on the list according to updated movie time
  */
-void findNextSubtitle(int way)
+void findNextSubtitle(int direction)
 {
 	currPrinted = false;
 	clearLatestLinesOnScreen();
 	/*
 	 * FORWARD
 	 */
-	if (way) {
+	if (direction) {
 		while (movie_time.cmpTime((*iter)->endTime) > 0) {
 			if (iter != --strInfoList.end()) {
 				iter++;
@@ -318,7 +318,10 @@ int main(int argc, char *argv[]) {
                 break;
             case 's':
                 speed = atoi(optarg);
-                cout << "FF FB speed: " << speed << endl;
+                if (speed < 0 || speed > 10000)
+                {
+                	cout << "FF/FB speed must be less than 10 seconds (10.000 msec) !" << endl;
+                }
                 break;
             case 'h':
             	usage();
@@ -352,12 +355,13 @@ int main(int argc, char *argv[]) {
     keypad(mainwin, TRUE);     /*  Enable the keypad for non-char keys  */
 
     /*  Print usage and refresh() the screen  */
-    mvaddstr(2, 10, "       Usage");
-    mvaddstr(3, 10, "====================");
-    mvaddstr(4, 10, "SpaceBar   to Pause");
-    mvaddstr(5, 10, "ESC        to quit");
-    mvaddstr(6, 10, "Right      to forward");
-    mvaddstr(7, 10, "Left       to forward");
+    mvaddstr(1, 10, "       Usage");
+    mvaddstr(2, 10, "====================");
+    mvaddstr(3, 10, "SpaceBar   to Pause");
+    mvaddstr(4, 10, "ESC        to quit");
+    mvaddstr(5, 10, "Right      to forward  ");
+    mvaddstr(6, 10, "Left       to backward ");
+    mvprintw(8, 10, "ff/fb speed is %d msec", speed);
     refresh();
 
     /*
@@ -370,7 +374,7 @@ int main(int argc, char *argv[]) {
     	switch (ch) {
     	case KEY_LEFT:
     		pauseMovie();
-    		movie_time.backward(1000);
+    		movie_time.backward(speed);
     		findNextSubtitle(0);
     		continueMovie();
     		break;
@@ -379,9 +383,9 @@ int main(int argc, char *argv[]) {
     		 * If we reach the end, no need to forward
     		 */
     		//if (iter != strInfoList.end()) {
-    		if (movie_time.timeInMsec + 1000 <= movie_end_time) {
+    		if (movie_time.timeInMsec + speed <= movie_end_time) {
     			pauseMovie();
-				movie_time.forward(1000);
+				movie_time.forward(speed);
 				findNextSubtitle(1);
 				continueMovie();
     		}
