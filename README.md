@@ -12,5 +12,4 @@ make
 ./ksp
 
 ### Develop
-fast-forward (ff) and fast-backward (fb) will be implemented soon
 libevent library can be used for more accurate timer (every milliseconds)
