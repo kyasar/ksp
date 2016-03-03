@@ -39,6 +39,22 @@ public:
 		this->timeInMsec = (((((h * 60 ) + m) * 60) + s) * 1000 + ms);
 	}
 
+	void forward(int f)
+	{
+		this->timeInMsec += f;
+	}
+
+	void backward(int b)
+	{
+		/*
+		 * Do not go to negative time
+		 */
+		if (b > this->timeInMsec)
+			this->timeInMsec = 0;
+		else
+			this->timeInMsec -= b;
+	}
+
 	std::string getPrintableTime();
 	int cmpTime(StrTime ctime);
 	bool betweenTimes(StrTime start, StrTime end);

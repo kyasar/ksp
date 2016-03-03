@@ -19,7 +19,6 @@
 #include <sys/time.h>
 #include <list>
 #include <cmath>
-//#include <event.h>
 
 #include "StrInfo.h"
 #include "StrTime.h"
@@ -40,14 +39,15 @@ struct sigaction sa;
 int totalPrinted = 0;
 bool currPrinted = false;
 int executed = 0;
+int movie_end_time = 0;
 
 void movie_player(int);
 bool timerStopped = false;
 
 /*
- * POSIX Timer set/unset methods
+ * Movie timer pause/play methods
  */
-void stop_timer(void)
+void pauseMovie(void)
 {
 	timer.it_value.tv_usec = 0;
 	timer.it_interval.tv_usec = 0;
@@ -55,7 +55,7 @@ void stop_timer(void)
 	timerStopped = true;
 }
 
-void start_timer()
+void continueMovie()
 {
 	memset (&sa, 0, sizeof (sa));
 	sa.sa_handler = &movie_player;
@@ -70,10 +70,58 @@ void start_timer()
 	timerStopped = false;
 }
 
-void toggle_timer(void)
+void togglePlaying(void)
 {
-	if (timerStopped)	start_timer();
-	else	stop_timer();
+	if (timerStopped)	continueMovie();
+	else	pauseMovie();
+}
+
+void clearLatestLinesOnScreen()
+{
+	for (int i = 0; i < lines_printed; i++) {
+		move(14 + i, 0);
+		clrtoeol();
+	}
+	lines_printed = 0;
+}
+
+/*
+ * This method is invoked when fast forward or backward operation is needed
+ * It finds the next subtitle entry on the list according to updated movie time
+ */
+void findNextSubtitle(int way)
+{
+	currPrinted = false;
+	clearLatestLinesOnScreen();
+	/*
+	 * FORWARD
+	 */
+	if (way) {
+		while (movie_time.cmpTime((*iter)->endTime) > 0) {
+			if (iter != --strInfoList.end()) {
+				iter++;
+				mvprintw(10, 10, "N: %2d, Total shown: %2d", (*iter)->number, totalPrinted);
+			} else
+				break;
+		}
+	}
+	/*
+	 * BACKWARD
+	 */
+	else {
+		while (movie_time.cmpTime((*iter)->startTime) < 0) {
+			if (iter != strInfoList.begin()) {
+				iter--;
+				if (movie_time.cmpTime((*iter)->endTime) >= 0) {
+					iter++;
+					break;
+				}
+				mvprintw(10, 10, "N: %2d, Total shown: %2d", (*iter)->number, totalPrinted);
+			}
+			else
+				break;
+		}
+	}
 }
 
 /*
@@ -89,13 +137,13 @@ void movie_player(int sig)
 	 * If yes, stop the movie time
 	 */
 	if (iter == strInfoList.end()) {
-		stop_timer();
+		pauseMovie();
 		return;
 	}
 
 	movie_time.incMillisecs();
 	mvprintw(9, 10, "Movie Time: %s", movie_time.getPrintableTime().c_str());
-	mvprintw(10, 10, "N: %d, Total shown: %d", (*iter)->number, totalPrinted);
+	mvprintw(10, 10, "N: %2d, Total shown: %2d", (*iter)->number, totalPrinted);
 	refresh();
 
 	/*
@@ -124,10 +172,8 @@ void movie_player(int sig)
 		/*
 		 * Remove the sentences on the screen, they are expired
 		 */
-		for (int i = 0; i < lines_printed; i++) {
-			move(14 + i, 0);
-			clrtoeol();
-		}
+		clearLatestLinesOnScreen();
+
 		/*
 		 * Skip to next subtitle entry
 		 */
@@ -232,8 +278,13 @@ void processSrtFile(char* srt_file)
 			cout << (*li) << endl;
 		}
 		cout << endl;
-	}
-    //exit(EXIT_SUCCESS); */
+	} */
+
+    /*
+     * Keep the end time of the subtitle for boundary control
+     */
+    iter = strInfoList.end();
+    movie_end_time = (*--iter)->endTime.timeInMsec;
 
 	/*
 	 * Current player iterator on the first entry of the list
@@ -292,7 +343,7 @@ int main(int argc, char *argv[]) {
     processSrtFile(srt_file);
 
     /*  Initialize ncurses  */
-    if ( (mainwin = initscr()) == NULL ) {
+    if ((mainwin = initscr()) == NULL ) {
 		fprintf(stderr, "Error initializing ncurses.\n");
 		exit(EXIT_FAILURE);
     }
@@ -312,27 +363,31 @@ int main(int argc, char *argv[]) {
     /*
      * Start movie timer to play
      */
-    start_timer();
+    continueMovie();
 
     while ((ch = getch()) != ESC_BTN)
     {
     	switch (ch) {
     	case KEY_LEFT:
-    //		movie_time.backwardSec(5);
-    		/*if (iter == strInfoList.begin()) {
-				continue;
-			}
-    		iter--;*/
+    		pauseMovie();
+    		movie_time.backward(1000);
+    		findNextSubtitle(0);
+    		continueMovie();
     		break;
     	case KEY_RIGHT:
-		//	movie_time.forwardSec(5);
-			/*if (iter == --strInfoList.end()) {
-				continue;
-			}
-			iter++;*/
+    		/*
+    		 * If we reach the end, no need to forward
+    		 */
+    		//if (iter != strInfoList.end()) {
+    		if (movie_time.timeInMsec + 1000 <= movie_end_time) {
+    			pauseMovie();
+				movie_time.forward(1000);
+				findNextSubtitle(1);
+				continueMovie();
+    		}
 			break;
     	case ' ':
-    		toggle_timer();
+    		togglePlaying();
     		break;
     	}
     }
