@@ -217,6 +217,7 @@ int main(int argc, char *argv[]) {
     if (!strcmp(srt_file, ""))
     {
     	cout << "No Subtitle file given !!" << srt_file << endl;
+    	usage();
 		exit(EXIT_FAILURE);
     }
 

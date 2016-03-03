@@ -1,4 +1,4 @@
-EXEC           = srt-player
+EXEC           = ksp
 SOURCES        = $(wildcard *.cpp)
 CFLAGS         = -Wall
 LDLIBS        = -lncurses # -levent
