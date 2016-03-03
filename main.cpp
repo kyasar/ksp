@@ -179,12 +179,21 @@ std::string readLineFromFile(ifstream* fd_srt)
 	return line;
 }
 
+void usage()
+{
+	cout << "Welcome to KSP (Kadir's just Subtitle Player)" << endl << endl;
+	cout << "\t Usage:" << endl << "\t ===================" << endl;
+	cout << "\t -h \t\t\t: Help" << endl;
+	cout << "\t -f <srt-file> \t\t: SRT formatted subtitle file" << endl;
+	cout << "\t -s <milliseconds> \t: Fast forward/backward speed on left/right buttons" << endl << endl;
+}
+
 int main(int argc, char *argv[]) {
     WINDOW * mainwin;
     int ch, ch_prev = 0, speed = 0;
-    char srt_file[SRT_FILE_NAME_LEN];
+    char srt_file[SRT_FILE_NAME_LEN] = {0};
 
-    while ( (ch = getopt(argc, argv, "f:s:") ) != -1)
+    while ( (ch = getopt(argc, argv, "f:s:h") ) != -1)
     {
         switch (ch)
         {
@@ -196,20 +205,27 @@ int main(int argc, char *argv[]) {
                 speed = atoi(optarg);
                 cout << "FF FB speed: " << speed << endl;
                 break;
-            case '?':
+            case 'h':
+            	usage();
+            	exit(EXIT_SUCCESS);
+            default:
                 fprintf(stderr, "Unrecognized option!\n");
                 break;
         }
     }
 
+    if (!strcmp(srt_file, ""))
+    {
+    	cout << "No Subtitle file given !!" << srt_file << endl;
+		exit(EXIT_FAILURE);
+    }
+
     ifstream fd_srt;
     fd_srt.open(srt_file);
-
     if (!fd_srt)
 	{
-		// Print an error and exit
-		cerr << "Uh oh, Sample.dat could not be opened for reading!" << endl;
-		exit(1);
+		cout << "Cannot open Subtitle file: " << srt_file << endl;
+		exit(EXIT_FAILURE);
 	}
 
 	// While there's still stuff left to read
