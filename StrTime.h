@@ -18,8 +18,9 @@
 
 class StrTime {
 public:
-	std::string strtime;
-	unsigned int timeInMsec;
+	std::string strtime;		// No need to encapsulate
+	unsigned int timeInMsec;	// Just keep in milliseconds
+
 	StrTime() {
 		resetTime();
 	};
@@ -38,58 +39,9 @@ public:
 		this->timeInMsec = (((((h * 60 ) + m) * 60) + s) * 1000 + ms);
 	}
 
-	void printTime()
-	{
-		std::cout << timeInMsec << std::endl;;
-	}
-
-	std::string getPrintableTime()
-	{
-		std::string out;
-		out.resize(20);
-		int msec = this->timeInMsec % 1000;
-		int hours = (this->timeInMsec / (60 * 60 * 1000));
-		int minutes = (this->timeInMsec / (60 * 1000)) % 60;
-		int seconds = (int) (this->timeInMsec / 1000) % 60;
-		sprintf(&out[0], "%02d:%02d:%02d:%03d", hours, minutes, seconds, msec);
-		//sprintf(&out[0], "%06d", timeInMsec);
-		return out;
-	}
-
-	int cmpTime(StrTime ctime)
-	{
-		if (this->timeInMsec < ctime.timeInMsec)	return -1;
-		else if (this->timeInMsec > ctime.timeInMsec)	return 1;
-		else	return 0;
-		/*
-		if (ctime.hour > hour) return -1;
-		else if (ctime.hour < hour)	return 1;
-		else {
-			if (ctime.minute > minute) return -1;
-			else if (ctime.minute < minute)	return 1;
-			else {
-				if (ctime.sec > sec) return -1;
-				else if (ctime.sec < sec)	return 1;
-				else {
-					if (ctime.sec > sec) return -1;
-					else if (ctime.sec < sec)	return 1;
-					else
-						return 0;
-				}
-			}
-		}
-		*/
-	}
-
-	bool betweenTimes(StrTime start, StrTime end)
-	{
-		if (cmpTime(start) >= 0 && cmpTime(end) <= 0)
-			return true;
-		else
-			return false;
-	}
-
-	virtual ~StrTime();
+	std::string getPrintableTime();
+	int cmpTime(StrTime ctime);
+	bool betweenTimes(StrTime start, StrTime end);
 };
 
 #endif /* STRTIME_H_ */

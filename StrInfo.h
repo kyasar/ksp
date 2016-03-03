@@ -12,15 +12,17 @@
 #include <list>
 #include "StrTime.h"
 
+/*
+ * Represents an entry with number, start and end times and sentences in the subtitle file
+ */
+
 class StrInfo {
 public:
-	int number;
+	int number;					// No need to encapsulate
 	StrTime startTime;
 	StrTime endTime;
 	std::string time_interval;
 	std::list<std::string> lines;
-	StrInfo();
-	virtual ~StrInfo();
 };
 
 #endif /* STRINFO_H_ */

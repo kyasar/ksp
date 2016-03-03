@@ -37,13 +37,10 @@ std::list<StrInfo*> strInfoList;
 std::list<StrInfo*>::iterator iter;
 struct itimerval timer;
 struct sigaction sa;
-//struct event ev;
-//struct timeval tv;
 int totalPrinted = 0;
 bool currPrinted = false;
 int executed = 0;
 
-//void timer_handler(int, short, void *);
 void movie_player(int);
 bool timerStopped = false;
 
@@ -60,20 +57,12 @@ void stop_timer(void)
 
 void start_timer()
 {
-	/*
-	tv.tv_sec = 0;
-	tv.tv_usec = 1000;
-	event_init();
-	event_set(&ev, -1, EV_PERSIST, timer_handler, NULL);
-	event_add(&ev, &tv);
-	*/
 	memset (&sa, 0, sizeof (sa));
 	sa.sa_handler = &movie_player;
 	sigaction (SIGALRM, &sa, NULL);	// POSIX signal
 
 	timer.it_value.tv_sec = 0;
 	timer.it_value.tv_usec = 1000;
-
 	timer.it_interval.tv_sec = 0;
 	timer.it_interval.tv_usec = 1000;
 
@@ -106,7 +95,7 @@ void movie_player(int sig)
 
 	movie_time.incMillisecs();
 	mvprintw(9, 10, "Movie Time: %s", movie_time.getPrintableTime().c_str());
-	mvprintw(10, 10, "iter: %d, total: %d", (*iter)->number, totalPrinted);
+	mvprintw(10, 10, "N: %d, Total shown: %d", (*iter)->number, totalPrinted);
 	refresh();
 
 	/*
@@ -147,6 +136,9 @@ void movie_player(int sig)
 	}
 }
 
+/*
+ * Some string functions to trim empty lines
+ */
 std::string TrimLeft(const std::string& s)
 {
     size_t startpos = s.find_first_not_of(WHITESPACE);
@@ -177,6 +169,78 @@ std::string readLineFromFile(ifstream* fd_srt)
 	std::string line;
 	getline(*fd_srt, line);
 	return line;
+}
+
+/*
+ * This function process given Subtitle file
+ * Creates a list of subtitle entries in the file
+ */
+void processSrtFile(char* srt_file)
+{
+    ifstream fd_srt;
+    std::string strLine;
+    int vals[8];
+
+    fd_srt.open(srt_file);
+    if (!fd_srt)
+	{
+		cout << "Cannot open Subtitle file: " << srt_file << endl;
+		exit(EXIT_FAILURE);
+	}
+
+	// While there's still stuff left to read
+	while (fd_srt)
+	{
+		// read stuff from the file into a string and print it
+		strLine = readLineFromFile(&fd_srt);
+		if (!isEmptyLine(strLine))
+		{
+			// Create an Entry object to keep the number times and sentences
+			StrInfo* strInfo = new StrInfo();
+			strInfo->number = atoi(strLine.c_str());	// Gets the entry number
+
+			strLine = readLineFromFile(&fd_srt);
+
+			// Gets the start and end times
+			sscanf(strLine.c_str(), "%u:%u:%u,%u --> %u:%u:%u,%u",
+				&vals[0], &vals[1], &vals[2], &vals[3],
+				&vals[4], &vals[5], &vals[6], &vals[7]);
+
+			strInfo->startTime.setTime(vals[0], vals[1], vals[2], vals[3]);
+			strInfo->endTime.setTime(vals[4], vals[5], vals[6], vals[7]);
+
+			// Gets sentences for current entry
+			strLine = readLineFromFile(&fd_srt);
+			while (!isEmptyLine(strLine)) {
+				strInfo->lines.insert(strInfo->lines.end(), strLine);
+				strLine = readLineFromFile(&fd_srt);
+			}
+
+			// Store current entry in the list of all entries
+			strInfoList.insert(strInfoList.end(), strInfo);
+		}
+	}
+
+    // Print all entries read. Just for debug
+	/*for (std::list<StrInfo*>::iterator it = strInfoList.begin(); it != strInfoList.end(); it++)
+	{
+		cout << (*it)->number << "  " << (*it)->startTime.getPrintableTime() << " --> " << (*it)->endTime.getPrintableTime() << endl;
+		cout << (*it)->number << "  " << (*it)->startTime.timeInMsec << " --> " << (*it)->endTime.timeInMsec << endl;
+		cout << (*it)->number << "  " << (*it)->startTime.getPrintableTime() << " --> " << (*it)->endTime.getPrintableTime() << endl;
+
+		for (std::list<std::string>::iterator li = (*it)->lines.begin(); li != (*it)->lines.end(); li++) {
+			cout << (*li) << endl;
+		}
+		cout << endl;
+	}
+    //exit(EXIT_SUCCESS); */
+
+	/*
+	 * Current player iterator on the first entry of the list
+	 * Srt File is completely processed and all entries are stored in an arraylist
+	 * Now, we are ready to play
+	 */
+	iter = strInfoList.begin();
 }
 
 void usage()
@@ -214,6 +278,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    // Check file
     if (!strcmp(srt_file, ""))
     {
     	cout << "No Subtitle file given !!" << srt_file << endl;
@@ -221,59 +286,10 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
     }
 
-    ifstream fd_srt;
-    fd_srt.open(srt_file);
-    if (!fd_srt)
-	{
-		cout << "Cannot open Subtitle file: " << srt_file << endl;
-		exit(EXIT_FAILURE);
-	}
-
-	// While there's still stuff left to read
-    std::string strLine;
-	while (fd_srt)
-	{
-		// read stuff from the file into a string and print it
-		strLine = readLineFromFile(&fd_srt);
-		if (!isEmptyLine(strLine))
-		{
-			StrInfo* strInfo = new StrInfo();
-			strInfo->number = atoi(strLine.c_str());
-
-			strLine = readLineFromFile(&fd_srt);
-
-			int vals[8];
-			sscanf(strLine.c_str(), "%u:%u:%u,%u --> %u:%u:%u,%u",
-				&vals[0], &vals[1], &vals[2], &vals[3],
-				&vals[4], &vals[5], &vals[6], &vals[7]);
-
-			strInfo->startTime.setTime(vals[0], vals[1], vals[2], vals[3]);
-			strInfo->endTime.setTime(vals[4], vals[5], vals[6], vals[7]);
-
-			strLine = readLineFromFile(&fd_srt);
-			while (!isEmptyLine(strLine)) {
-				strInfo->lines.insert(strInfo->lines.end(), strLine);
-				strLine = readLineFromFile(&fd_srt);
-			}
-			strInfoList.insert(strInfoList.end(), strInfo);
-		}
-	}
-
-	for (std::list<StrInfo*>::iterator it = strInfoList.begin(); it != strInfoList.end(); it++)
-	{
-		cout << (*it)->number << "  " << (*it)->startTime.getPrintableTime() << " --> " << (*it)->endTime.getPrintableTime() << endl;
-		cout << (*it)->number << "  " << (*it)->startTime.timeInMsec << " --> " << (*it)->endTime.timeInMsec << endl;
-		cout << (*it)->number << "  " << (*it)->startTime.getPrintableTime() << " --> " << (*it)->endTime.getPrintableTime() << endl;
-
-		//cout << (*it)->endTime.cmpTime((*it)->startTime) << endl;
-
-		for (std::list<std::string>::iterator li = (*it)->lines.begin(); li != (*it)->lines.end(); li++) {
-			cout << (*li) << endl;
-		}
-		cout << endl;
-	}
-
-    //exit(EXIT_SUCCESS);
+    /*
+     * No need for return value
+     */
+    processSrtFile(srt_file);
 
     /*  Initialize ncurses  */
     if ( (mainwin = initscr()) == NULL ) {
@@ -284,7 +300,7 @@ int main(int argc, char *argv[]) {
     noecho();                  /*  Turn off key echoing                 */
     keypad(mainwin, TRUE);     /*  Enable the keypad for non-char keys  */
 
-    /*  Print a prompt and refresh() the screen  */
+    /*  Print usage and refresh() the screen  */
     mvaddstr(2, 10, "       Usage");
     mvaddstr(3, 10, "====================");
     mvaddstr(4, 10, "SpaceBar   to Pause");
@@ -293,11 +309,9 @@ int main(int argc, char *argv[]) {
     mvaddstr(7, 10, "Left       to forward");
     refresh();
 
-    /*  Loop until user presses 'q'  */
-    int counter = 0, lines_printed = 0;
-    iter = strInfoList.begin();
-
-    //event_loop(0);
+    /*
+     * Start movie timer to play
+     */
     start_timer();
 
     while ((ch = getch()) != ESC_BTN)
